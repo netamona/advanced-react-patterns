@@ -97,7 +97,9 @@ function useToggle({
   // so we don't need to worry about breaking the rules of hooks. Thanks to
   // code minification, this won't be part of our production build.
   if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useControlledSwitchWarning(controlledOn)
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useReadOnlyWarning(controlledOn, 'on', onChange, readOnly)
   }
 
