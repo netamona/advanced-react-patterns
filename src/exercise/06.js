@@ -16,6 +16,49 @@ const actionTypes = {
   reset: 'reset',
 }
 
+const useControlledSwitchWarning = controlledPropValue => {
+  const isControlled = controlledPropValue != null
+
+  const {current: wasControlled} = React.useRef(isControlled)
+
+  useEffect(() => {
+    warning(
+      !(isControlled && !wasControlled),
+      'A component is changing an uncontrolled input to be controlled. ' +
+        'This is likely caused by the value changing from undefined to a defined ' +
+        'value, which should not happen. Decide between using a controlled or ' +
+        'uncontrolled input element for the lifetime of the component',
+    )
+    warning(
+      !(!isControlled && wasControlled),
+      'A component is changing a controlled input to be uncontrolled. ' +
+        'This is likely caused by the value changing from a defined to undefined, ' +
+        'which should not happen. Decide between using a controlled or' +
+        ' uncontrolled input element for the lifetime of the component.',
+    )
+  }, [wasControlled, isControlled])
+}
+
+const useReadOnlyWarning = (
+  controlPropValue,
+  controlPropName,
+  onChange,
+  readOnly,
+) => {
+  const isControlled = controlPropValue != null
+  const hasOnChange = !!onChange
+
+  useEffect(() => {
+    warning(
+      isControlled && !hasOnChange && !readOnly,
+      `You provided a ${controlPropName} prop to a form field without 
+        an 'onChange' handler. This will render a read-only field. If the field 
+        should be mutable use 'defaultValue'. Otherwise, set either 
+        'onChange' or 'readOnly'. at input`,
+    )
+  }, [isControlled, hasOnChange, readOnly, controlPropName])
+}
+
 function toggleReducer(state, {type, initialState}) {
   switch (type) {
     case actionTypes.toggle: {
@@ -45,23 +88,18 @@ function useToggle({
   // 🐨 determine whether on is controlled and assign that to `onIsControlled`
   // 💰 `controlledOn != null`
   const onIsControlled = controlledOn != null
-  const hasOnChange = !!onChange
-
-  useEffect(
-    () =>
-      warning(
-        onIsControlled && !hasOnChange && !readOnly,
-        'You provided an `on` prop to a form field without an `onChange`' +
-          ' handler. This will render a read-only field. If the field should be ' +
-          'mutable use `defaultValue`. Otherwise, set either `onChange` or ' +
-          '`readOnly`.',
-      ),
-    [onIsControlled, hasOnChange],
-  )
 
   // 🐨 Replace the next line with `const on = ...` which should be `controlledOn` if
   // `onIsControlled`, otherwise, it should be `state.on`.
   const on = onIsControlled ? controlledOn : state.on
+
+  // The NODE_ENV doesn't change in the entire lifetime of the application
+  // so we don't need to worry about breaking the rules of hooks. Thanks to
+  // code minification, this won't be part of our production build.
+  if (process.env.NODE_ENV !== 'production') {
+    useControlledSwitchWarning(controlledOn)
+    useReadOnlyWarning(controlledOn, 'on', onChange, readOnly)
+  }
 
   // We want to call `onChange` any time we need to make a state change, but we
   // only want to call `dispatch` if `!onIsControlled` (otherwise we could get
